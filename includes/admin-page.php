@@ -15,21 +15,36 @@ add_action('admin_menu', function () {
 
 function csv_user_importer_admin_page() {
     ?>
-    <div class="wrap">
-        <h1>CSV User Importer</h1>
-        <form method="post" enctype="multipart/form-data">
-            <input type="file" name="user_csv" accept=".csv" required>
-            <?php submit_button('Upload and Validate'); ?>
-        </form>
+        <div class="wrap">
+            <h1>CSV User Importer</h1>
 
-        <h2>Download CSV Template</h2>
-        <p>
-            <a href="<?php echo esc_url(admin_url('admin.php?page=csv-user-importer&download_csv_template=1')); ?>" class="button">
-                Download CSV Template
-            </a>
-        </p>
+            <style>
+                .csv-import-box {
+                    background: #fff;
+                    padding: 20px;
+                    border: 1px solid #ccd0d4;
+                    border-radius: 4px;
+                    margin-bottom: 30px;
+                    width: min-content;
+                }
+            </style>
 
-    </div>
+            <div class="csv-import-box">
+                <h2>Import Users</h2>
+                <form method="post" enctype="multipart/form-data">
+                    <input type="file" name="user_csv" accept=".csv" required>
+                    <?php submit_button('Upload and Validate'); ?>
+                </form>
+            </div>
+
+            <h2>Download CSV Template</h2>
+            <p>
+                <a href="<?php echo esc_url(admin_url('admin.php?page=csv-user-importer&download_csv_template=1')); ?>" class="button">
+                    Download CSV Template
+                </a>
+            </p>
+        </div>
+
     <?php
 
     if (!empty($_FILES['user_csv']['tmp_name'])) {

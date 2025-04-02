@@ -9,8 +9,8 @@ add_action('admin_init', function () {
         header('Expires: 0');
 
         $output = fopen('php://output', 'w');
-        fputcsv($output, ['first_name', 'last_name', 'email', 'username', 'password', 'course_ids']);
-        fputcsv($output, ['Jane', 'Doe', 'jane@example.com', 'janedoe', 'securepassword', '101']);
+        fputcsv($output, ['first_name', 'last_name', 'email', 'course_ids']);
+        fputcsv($output, ['Jane', 'Doe', 'jane@example.com', '101']);
         fclose($output);
         exit;
     }

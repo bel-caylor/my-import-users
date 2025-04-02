@@ -1,5 +1,4 @@
 <?php
-
 function csv_user_importer_process_csv($csv_path) {
     if (!file_exists($csv_path)) {
         echo '<div class="notice notice-error"><p>CSV file not found.</p></div>';
@@ -21,16 +20,24 @@ function csv_user_importer_process_csv($csv_path) {
     while (($row = fgetcsv($file)) !== false) {
         $data = array_combine($headers, $row);
         $email = sanitize_email($data['email']);
-        $username = sanitize_user($data['username'], true);
-        $password = $data['password'];
         $first_name = sanitize_text_field($data['first_name']);
         $last_name = sanitize_text_field($data['last_name']);
         $course_ids = array_map('intval', explode(',', $data['course_ids']));
+
+        // Generate unique username: first letter of first name + last name
+        $base_username = sanitize_user(strtolower(substr($first_name, 0, 1) . $last_name), true);
+        $username = $base_username;
+        $suffix = 1;
+        while (username_exists($username)) {
+            $username = $base_username . $suffix;
+            $suffix++;
+        }
 
         if (email_exists($email)) {
             $user = get_user_by('email', $email);
             $user_id = $user->ID;
         } else {
+            $password = wp_generate_password();
             $user_id = wp_create_user($username, $password, $email);
             if (is_wp_error($user_id)) {
                 echo '<div class="notice notice-error"><p>Error creating user: ' . esc_html($email) . '</p></div>';
@@ -42,6 +49,9 @@ function csv_user_importer_process_csv($csv_path) {
                 'last_name' => $last_name,
                 'role' => 'subscriber',
             ]);
+
+            // Send password reset email
+            wp_new_user_notification($user_id, null, 'user');
         }
 
         // Enroll in LearnDash course(s)
