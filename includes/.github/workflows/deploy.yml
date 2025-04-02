@@ -1,0 +1,24 @@
+name: Deploy to SiteGround
+
+on:
+  push:
+    branches:
+      - main  # or 'master', depending on your default branch
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+
+      - name: Set up SSH Agent
+        uses: webfactory/ssh-agent@v0.7.0
+        with:
+          ssh-private-key: ${{ secrets.SITEGROUND_DEPLOY_KEY }}
+
+      - name: Deploy Plugin to SiteGround
+        run: |
+          rsync -avz --delete ./ \
+            u2-smz1gt6nittm@ssh.danstromain.com:/home/customer/www/danstromain.com/public_html/courses/wp-content/plugins/my-import-users/
