@@ -18,6 +18,12 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.SITEGROUND_DEPLOY_KEY }}
 
+      - name: Configure SSH and Test Connection
+        run: |
+          mkdir -p ~/.ssh
+          echo "StrictHostKeyChecking no" >> ~/.ssh/config
+          ssh u2-smz1gt6nittm@ssh.danstromain.com "echo ✅ SSH connection successful"
+
       - name: Deploy Plugin to SiteGround
         run: |
           rsync -avz --delete ./ \
