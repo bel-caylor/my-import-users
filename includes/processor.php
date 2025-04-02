@@ -22,10 +22,11 @@ function csv_user_importer_process_csv($csv_path) {
         $email = sanitize_email($data['email']);
         $first_name = sanitize_text_field($data['first_name']);
         $last_name = sanitize_text_field($data['last_name']);
-        $course_ids = array_map('intval', explode(',', $data['course_ids']));
+        $course_titles = array_map('trim', explode(',', $data['course_title']));
 
-        // Generate unique username: first letter of first name + last name
-        $base_username = sanitize_user(strtolower(substr($first_name, 0, 1) . $last_name), true);
+        // Generate unique username: first letter of first name + last name, max 50 chars
+        $base_username = strtolower(substr($first_name, 0, 1) . $last_name);
+        $base_username = substr(sanitize_user($base_username, true), 0, 50);
         $username = $base_username;
         $suffix = 1;
         while (username_exists($username)) {
@@ -45,24 +46,33 @@ function csv_user_importer_process_csv($csv_path) {
             }
             wp_update_user([
                 'ID' => $user_id,
+                'user_email' => $email,
                 'first_name' => $first_name,
                 'last_name' => $last_name,
                 'role' => 'subscriber',
             ]);
 
-            // Send password reset email
             wp_new_user_notification($user_id, null, 'user');
         }
 
-        // Enroll in LearnDash course(s)
-        foreach ($course_ids as $course_id) {
-            $is_enrolled = ld_is_user_enrolled($user_id, $course_id);
-            if (!$is_enrolled) {
+        // Enroll in LearnDash course(s) by title
+        foreach ($course_titles as $course_title) {
+            $course = get_page_by_title($course_title, OBJECT, 'sfwd-courses');
+            if (!$course) {
+                echo '<div class="notice notice-error"><p>Course not found: ' . esc_html($course_title) . '</p></div>';
+                continue;
+            }
+
+            $course_id = $course->ID;
+
+            // Check if the user is already enrolled in the course
+            $enrolled_courses = learndash_user_get_enrolled_courses($user_id);
+            if (!in_array($course_id, $enrolled_courses)) {
+                // Enroll the user in the course
                 ld_update_course_access($user_id, $course_id, false);
             }
 
-            // Add to MailPoet list named after the course (assumes list name matches course title)
-            $course_title = get_the_title($course_id);
+            // Add to MailPoet list named after the course title
             $mailpoet_lists = $mailpoet_api->getLists();
             $matched_list = array_filter($mailpoet_lists, function ($list) use ($course_title) {
                 return $list['name'] === $course_title;
@@ -97,6 +107,7 @@ function csv_user_importer_process_csv($csv_path) {
                 }
             }
         }
+
     }
 
     fclose($file);
