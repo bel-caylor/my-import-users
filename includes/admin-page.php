@@ -16,7 +16,7 @@ add_action('admin_menu', function () {
 function csv_user_importer_admin_page() {
     ?>
         <div class="wrap">
-            <h1><b>CSV User Importer</b></h1>
+            <h1>CSV User Importer</h1>
 
             <style>
                 .csv-import-box {
