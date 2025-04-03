@@ -1,30 +1,21 @@
-name: Deploy to SiteGround
+name: Deploy Plugin to SiteGround via SFTP
 
 on:
   push:
     branches:
-      - main  # or 'master', depending on your default branch
+      - main  # or your default branch
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout Repo
+      - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Set up SSH Agent
-        uses: webfactory/ssh-agent@v0.7.0
+      - name: Deploy to SiteGround via SFTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
         with:
-          ssh-private-key: ${{ secrets.SITEGROUND_DEPLOY_KEY }}
-
-      - name: Configure SSH and Test Connection
-        run: |
-          mkdir -p ~/.ssh
-          echo "StrictHostKeyChecking no" >> ~/.ssh/config
-          ssh u2-smz1gt6nittm@ssh.danstromain.com "echo ✅ SSH connection successful"
-
-      - name: Deploy Plugin to SiteGround
-        run: |
-          rsync -avz --delete ./ \
-            u2-smz1gt6nittm@ssh.danstromain.com:/home/customer/www/danstromain.com/public_html/courses/wp-content/plugins/my-import-users/
+          server: ${{ secrets.SFTP_SERVER }}
+          username: ${{ secrets.SFTP_USERNAME }}
+          password: ${{ secrets.SFTP_PASSWORD }}
+          server-dir: /public_html/wp-content/plugins/my-import-users/
