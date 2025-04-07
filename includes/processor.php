@@ -52,7 +52,7 @@ function csv_user_importer_process_csv($csv_path) {
                 'role' => 'subscriber',
             ]);
 
-            wp_new_user_notification($user_id, null, 'user');
+            // wp_new_user_notification($user_id, null, 'user');
         }
 
         // Enroll in LearnDash course(s) by title
