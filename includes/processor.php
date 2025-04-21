@@ -49,7 +49,7 @@ function csv_user_importer_process_csv($csv_path) {
                 'user_email' => $email,
                 'first_name' => $first_name,
                 'last_name' => $last_name,
-                'role' => 'subscriber',
+                'role' => 'learner',
             ]);
 
             // wp_new_user_notification($user_id, null, 'user');
