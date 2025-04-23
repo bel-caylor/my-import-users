@@ -1,3 +1,4 @@
+<?php
 function csv_user_importer_process_csv($csv_path) {
     if (!file_exists($csv_path)) {
         echo '<div class="notice notice-error"><p>CSV file not found.</p></div>';
@@ -10,13 +11,11 @@ function csv_user_importer_process_csv($csv_path) {
     }
 
     $mailpoet_api = \MailPoet\API\API::MP('v1');
+
     $file = fopen($csv_path, 'r');
     $headers = fgetcsv($file);
 
-    $users_added = 0;
-    $users_skipped = 0;
-    $enrollments_made = 0;
-    $errors = [];
+    echo '<div class="notice notice-success"><p>Import started...</p></div>';
 
     while (($row = fgetcsv($file)) !== false) {
         $data = array_combine($headers, $row);
@@ -25,7 +24,7 @@ function csv_user_importer_process_csv($csv_path) {
         $last_name = sanitize_text_field($data['last_name']);
         $course_titles = array_map('trim', explode(',', $data['course_title']));
 
-        // Generate unique username
+        // Generate unique username: first letter of first name + last name, max 50 chars
         $base_username = strtolower(substr($first_name, 0, 1) . $last_name);
         $base_username = substr(sanitize_user($base_username, true), 0, 50);
         $username = $base_username;
@@ -38,62 +37,54 @@ function csv_user_importer_process_csv($csv_path) {
         if (email_exists($email)) {
             $user = get_user_by('email', $email);
             $user_id = $user->ID;
-            $users_skipped++;
-
-            // Optional: Update user info
-            wp_update_user([
-                'ID' => $user_id,
-                'first_name' => $first_name,
-                'last_name' => $last_name,
-                'role' => 'learner',
-            ]);
-
         } else {
             $password = wp_generate_password();
             $user_id = wp_create_user($username, $password, $email);
             if (is_wp_error($user_id)) {
-                $errors[] = "Error creating user: {$email}";
+                echo '<div class="notice notice-error"><p>Error creating user: ' . esc_html($email) . '</p></div>';
                 continue;
             }
-
             wp_update_user([
                 'ID' => $user_id,
+                'user_email' => $email,
                 'first_name' => $first_name,
                 'last_name' => $last_name,
                 'role' => 'learner',
             ]);
 
-            $users_added++;
+            // wp_new_user_notification($user_id, null, 'user');
         }
 
-        // Enroll in LearnDash course(s)
+        // Enroll in LearnDash course(s) by title
         foreach ($course_titles as $course_title) {
             $course = get_page_by_title($course_title, OBJECT, 'sfwd-courses');
             if (!$course) {
-                $errors[] = "Course not found: {$course_title}";
+                echo '<div class="notice notice-error"><p>Course not found: ' . esc_html($course_title) . '</p></div>';
                 continue;
             }
 
             $course_id = $course->ID;
-            $enrolled_courses = learndash_user_get_enrolled_courses($user_id);
 
+            // Check if the user is already enrolled in the course
+            $enrolled_courses = learndash_user_get_enrolled_courses($user_id);
             if (!in_array($course_id, $enrolled_courses)) {
+                // Enroll the user in the course
                 ld_update_course_access($user_id, $course_id, false);
-                $enrollments_made++;
             }
 
-            // MailPoet Subscription
-            try {
-                $mailpoet_lists = $mailpoet_api->getLists();
-                $matched_list = array_filter($mailpoet_lists, function ($list) use ($course_title) {
-                    return $list['name'] === $course_title;
-                });
+            // Add to MailPoet list named after the course title
+            $mailpoet_lists = $mailpoet_api->getLists();
+            $matched_list = array_filter($mailpoet_lists, function ($list) use ($course_title) {
+                return $list['name'] === $course_title;
+            });
 
-                if (!empty($matched_list)) {
-                    $list_ids = array_column($matched_list, 'id');
+            if (!empty($matched_list)) {
+                $list_ids = array_column($matched_list, 'id');
+
+                try {
                     $subscriber = $mailpoet_api->getSubscriber($email);
-
                     if ($subscriber) {
+                        // Resubscribe if unsubscribed
                         if ($subscriber['status'] !== 'subscribed') {
                             $mailpoet_api->subscribeToLists($subscriber['id'], $list_ids);
                         } else {
@@ -111,30 +102,14 @@ function csv_user_importer_process_csv($csv_path) {
                             'last_name' => $last_name,
                         ], $list_ids);
                     }
+                } catch (Exception $e) {
+                    echo '<div class="notice notice-error"><p>MailPoet error for ' . esc_html($email) . ': ' . esc_html($e->getMessage()) . '</p></div>';
                 }
-
-            } catch (Exception $e) {
-                $errors[] = "MailPoet error for {$email}: " . $e->getMessage();
             }
         }
+
     }
 
     fclose($file);
-
-    // ✅ Admin Summary Output
-    echo '<div class="notice notice-success"><p>';
-    echo "Import complete:<br>";
-    echo "• Users added: {$users_added}<br>";
-    echo "• Users updated/skipped: {$users_skipped}<br>";
-    echo "• Enrollments made: {$enrollments_made}<br>";
-    if (!empty($errors)) {
-        echo "• Errors:<ul>";
-        foreach ($errors as $error) {
-            echo '<li>' . esc_html($error) . '</li>';
-        }
-        echo "</ul>";
-    } else {
-        echo "• No errors.";
-    }
-    echo '</p></div>';
+    echo '<div class="notice notice-success"><p>Import completed.</p></div>';
 }
