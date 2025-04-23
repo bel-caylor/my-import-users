@@ -18,4 +18,4 @@ jobs:
           server: ${{ secrets.SFTP_SERVER }}
           username: ${{ secrets.SFTP_USERNAME }}
           password: ${{ secrets.SFTP_PASSWORD }}
-          server-dir: /danstromain.com/public_html/wp-content/plugins/
+          server-dir: /danstromain.com/public_html/courses/wp-content/plugins/my-import-users/

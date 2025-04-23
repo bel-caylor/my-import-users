@@ -2,7 +2,7 @@
 /**
  * Plugin Name: CSV User Importer with LearnDash & MailPoet
  * Description: Upload a CSV to create users, assign LearnDash courses, and add to MailPoet list.
- * Version: 1.3
+ * Version: 1.4
  */
 
 // Load includes
